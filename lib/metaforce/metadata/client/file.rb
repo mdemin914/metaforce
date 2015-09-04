@@ -39,15 +39,16 @@ module Metaforce
         # Public: Checks the status of an async result.
         #
         # ids  - A list of ids to check.
-        # type - either :deploy or :retrieve
+        # type - either :deploy or :retrieve 
+        #  -> deprecated use check_retrieve_status or check_deploy_status as of WSDL 30.0
         #
         # Examples
         # 
         #   client.status('04sU0000000Wx6KIAS')
         #   #=> {:done=>true, :id=>"04sU0000000Wx6KIAS", :state=>"Completed", ...}
-        def status(ids, type=nil)
-          method = :check_status
-          method = :"check_#{type}_status" if type
+        def status(ids, type)
+          method = type == :retrieve ? :check_retrieve_status : :check_deploy_status
+          #method = :check_retrieve_status
           ids = [ids] unless ids.respond_to?(:each)
           request method do |soap|
             soap.body = { :ids => ids }

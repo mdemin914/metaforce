@@ -23,9 +23,10 @@ module Metaforce
     #   # => #<Metaforce::Job @id=nil>
     #
     # Returns self.
-    def initialize(client)
+    def initialize(client, type)
       @_callbacks = Hash.new { |h,k| h[k] = [] }
       @client = client
+      @type = type
     end
 
     # Public: Perform the job.
@@ -83,43 +84,32 @@ module Metaforce
       end
     end
 
-    # Public: Queries the job status from the API.
-    #
-    # Examples
-    #
-    #   job.status
-    #   # => { :id => '1234', :done => false, ... }
-    #
-    # Returns the AsyncResult (http://www.salesforce.com/us/developer/docs/api_meta/Content/meta_asyncresult.htm).
-    def status
-      @status ||= client.status(id)
-    end
-
-    # Public: Returns true if the job has completed. 
-    #
-    # Examples
-    #
-    #   job.done
-    #   # => true
-    #
-    # Returns true if the job has completed, false otherwise.
-    def done?
-      status.done
-    end
-
-    # Public: Returns the state if the job has finished processing.
+    # Public: Queries the job status from the API and sets the state.
     #
     # Examples
     #
     #   job.state
+    #   # => { :id => '1234', :done => false, ... }
+    #
+    # Returns CheckRetrieveStatus or CheckDeployStatus based on the type. 
+    # The status can be done and it has can have the results i.e. file.
+    def state
+      @state ||= client.status(id, @type)
+    end
+
+    # Public: Returns the status of the job.
+    #
+    # Examples
+    #
+    #   job.status
     #   # => 'Completed'
     #
     # Returns the state of the job.
-    def state
-      status.state
+    def status
+      state.status
     end
 
-    # Public: Check if the job is in a given state.
+    # Public: Check if the job is in a given status.
     #
     # Examples
     #
@@ -134,8 +124,8 @@ module Metaforce
     #   in_progress?
     #   completed?
     #   error?
-    %w[Queued InProgress Completed Error].each do |state|
-      define_method :"#{state.underscore}?" do; self.state == state end
+    %w[Queued InProgress Completed Succeeded Error Done].each do |status|
+      define_method :"#{status.underscore}?" do; self.status == status end
     end
 
     def inspect
@@ -169,14 +159,14 @@ module Metaforce
       proc {
         delay = DELAY_START
         loop do
-          @status = nil
           sleep (delay = delay * DELAY_MULTIPLIER)
           trigger :on_poll
-          if completed? || error?
+          if succeeded? || error?
             trigger callback_type
             Thread.stop if threading?
             break
           end
+          @status = nil
         end
       }
     end
@@ -188,7 +178,7 @@ module Metaforce
     end
 
     def callback_type
-      if completed?
+      if succeeded?
         :on_complete
       elsif error?
         :on_error

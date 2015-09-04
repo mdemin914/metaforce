@@ -10,7 +10,7 @@ module Metaforce
     #
     # Returns self.
     def initialize(client, path, options={})
-      super(client)
+      super(client, :deploy)
       @path, @options = path, options
     end
 

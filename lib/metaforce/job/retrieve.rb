@@ -10,7 +10,7 @@ module Metaforce
     #
     # Returns self.
     def initialize(client, options={})
-      super(client)
+      super(client, :retrieve)
       @options = options
     end
 
@@ -37,7 +37,7 @@ module Metaforce
     #
     # Returns the RetrieveResult (http://www.salesforce.com/us/developer/docs/api_meta/Content/meta_retrieveresult.htm).
     def result
-      @result ||= client.status(id, :retrieve)
+      @result ||= state
     end
 
     # Public: Decodes the content of the returned zip file.
@@ -49,7 +49,7 @@ module Metaforce
     #
     # Returns the decoded content.
     def zip_file
-      Base64.decode64(result.zip_file)
+      Base64.decode64(result[:zip_file])
     end
 
     # Public: Unzips the returned zip file to the location.
