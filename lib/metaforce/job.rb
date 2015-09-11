@@ -166,7 +166,7 @@ module Metaforce
             Thread.stop if threading?
             break
           end
-          @status = nil
+          @state = nil
         end
       }
     end
